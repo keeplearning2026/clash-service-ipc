@@ -6,8 +6,8 @@ mod common;
 mod tests {
     use anyhow::{Context, Result};
     #[cfg(unix)]
-    use clash_verge_service_ipc::acquire_service_owner;
-    use clash_verge_service_ipc::{
+    use clash_service_ipc::acquire_service_owner;
+    use clash_service_ipc::{
         ClashConfig, CoreConfig, CoreWatchdogTestConfig, ServiceLifecycleState, connect,
         persist_core_stopped, reconcile_service_startup, run_ipc_server,
         run_ipc_supervisor_until_shutdown, service_lifecycle_state, service_paths,

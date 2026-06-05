@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-const SERVICE_NAME: &str = "clash-verge-service";
+const SERVICE_NAME: &str = "clash-service";
 
 #[derive(Debug, Clone)]
 pub struct ServicePaths {
@@ -63,7 +63,7 @@ fn runtime_dir() -> PathBuf {
         Path::new(crate::IPC_PATH)
             .parent()
             .map(Path::to_path_buf)
-            .unwrap_or_else(|| PathBuf::from("/tmp/verge"))
+            .unwrap_or_else(|| PathBuf::from("/var/run"))
     }
 
     #[cfg(windows)]
@@ -75,7 +75,7 @@ fn runtime_dir() -> PathBuf {
 fn persistent_state_dir() -> PathBuf {
     #[cfg(feature = "test")]
     {
-        std::env::temp_dir().join("clash-verge-service-ipc-test-state")
+        std::env::temp_dir().join("clash-service-ipc-test-state")
     }
 
     #[cfg(all(unix, not(feature = "test")))]

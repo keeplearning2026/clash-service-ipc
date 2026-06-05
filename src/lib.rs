@@ -23,14 +23,14 @@ pub use core::{CoreWatchdogTestConfig, set_core_watchdog_config_for_tests};
 pub use client::*;
 
 #[cfg(all(unix, not(feature = "test")))]
-pub static IPC_PATH: &str = "/tmp/verge/clash-verge-service.sock";
+pub static IPC_PATH: &str = "/var/run/clash-service.sock";
 #[cfg(all(windows, not(feature = "test")))]
-pub static IPC_PATH: &str = r"\\.\pipe\clash-verge-service";
+pub static IPC_PATH: &str = r"\\.\pipe\clash-service";
 
 #[cfg(all(feature = "test", unix))]
-pub static IPC_PATH: &str = "/tmp/clash-verge-service-ipc-test/service.sock";
+pub static IPC_PATH: &str = "/tmp/clash-service-ipc-test/service.sock";
 #[cfg(all(feature = "test", windows))]
-pub static IPC_PATH: &str = r"\\.\pipe\clash-verge-service-test";
+pub static IPC_PATH: &str = r"\\.\pipe\clash-service-test";
 
 #[cfg(any(feature = "standalone", feature = "client"))]
 pub static IPC_AUTH_EXPECT: &str = r#"A thing of beauty is a joy for ever. Its loveliness increases; it will never pass into nothingness."#;

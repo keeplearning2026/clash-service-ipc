@@ -3,7 +3,7 @@ mod common;
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use clash_verge_service_ipc::{
+    use clash_service_ipc::{
         ClashConfig, CoreConfig, connect, load_desired_state, persist_core_stopped, run_ipc_server,
         service_status_snapshot, start_clash, stop_ipc_server,
     };

@@ -69,11 +69,11 @@ pub struct Response<T> {
 impl Default for CoreConfig {
     fn default() -> Self {
         let core_ipc_path = if cfg!(windows) {
-            r"\\.\pipe\verge-mihomo".to_string()
+            r"\\.\pipe\clash-mihomo".to_string()
         } else if cfg!(feature = "test") {
-            "/tmp/clash-verge-service-ipc-test/mihomo.sock".to_string()
+            "/tmp/clash-service-ipc-test/mihomo.sock".to_string()
         } else {
-            "/tmp/verge/verge-mihomo.sock".to_string()
+            "/var/run/clash-mihomo.sock".to_string()
         };
         Self {
             core_path: "./clash".to_string(),
