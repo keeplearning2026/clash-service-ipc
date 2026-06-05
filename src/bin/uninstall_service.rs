@@ -46,7 +46,7 @@ fn main() -> Result<(), Error> {
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<(), Error> {
-    const SERVICE_NAME: &str = "clash-verge-service";
+    const SERVICE_NAME: &str = "clash-service";
     use std::env;
 
     let debug = env::args().any(|arg| arg == "--debug");
