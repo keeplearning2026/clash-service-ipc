@@ -110,19 +110,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "clash_verge_logger"
-version = "0.2.2"
-source = "git+https://github.com/clash-verge-rev/clash-verge-logger.git#e4768e3852c4868ed86e7210df82c1178467820d"
-dependencies = [
- "arraydeque",
- "compact_str",
- "flexi_logger",
- "log",
- "tokio",
-]
-
-[[package]]
-name = "clash_verge_service_ipc"
+name = "clash_service_ipc"
 version = "2.3.0"
 dependencies = [
  "anyhow",
@@ -145,6 +133,18 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "windows-service",
+]
+
+[[package]]
+name = "clash_verge_logger"
+version = "0.2.2"
+source = "git+https://github.com/clash-verge-rev/clash-verge-logger.git#e4768e3852c4868ed86e7210df82c1178467820d"
+dependencies = [
+ "arraydeque",
+ "compact_str",
+ "flexi_logger",
+ "log",
+ "tokio",
 ]
 
 [[package]]
