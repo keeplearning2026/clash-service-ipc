@@ -46,23 +46,19 @@ fn main() -> Result<(), Error> {
     let debug = env::args().any(|arg| arg == "--debug");
     let _ = uninstall_old_service();
 
-    let service_binary_path = env::current_exe()
-        .unwrap()
-        .with_file_name("clash-service");
+    let service_binary_path = env::current_exe().unwrap().with_file_name("clash-service");
 
     if !service_binary_path.exists() {
         return Err(anyhow::anyhow!("clash-service binary not found"));
     }
 
     // 定义 bundle 路径
-    let bundle_path =
-        "/Library/PrivilegedHelperTools/io.github.keeplearning2026.clash.service.bundle";
+    let bundle_path = "/Library/PrivilegedHelperTools/io.github.keeplearning2026.clash.service.bundle";
     let contents_path = format!("{}/Contents", bundle_path);
     let macos_path = format!("{}/MacOS", contents_path);
 
     // 创建 bundle 目录结构
-    std::fs::create_dir_all(&macos_path)
-        .map_err(|e| anyhow::anyhow!("Failed to create bundle directories: {}", e))?;
+    std::fs::create_dir_all(&macos_path).map_err(|e| anyhow::anyhow!("Failed to create bundle directories: {}", e))?;
 
     // 复制二进制文件到 bundle 的 MacOS 目录
     let target_binary_path = format!("{}/clash-service", macos_path);
@@ -79,13 +75,11 @@ fn main() -> Result<(), Error> {
     // 创建 LaunchDaemons 目录（如果不存在）
     let plist_dir = Path::new("/Library/LaunchDaemons");
     if !plist_dir.exists() {
-        std::fs::create_dir(plist_dir)
-            .map_err(|e| anyhow::anyhow!("Failed to create plist directory: {}", e))?;
+        std::fs::create_dir(plist_dir).map_err(|e| anyhow::anyhow!("Failed to create plist directory: {}", e))?;
     }
 
     // 创建并写入 launchd plist
-    let plist_file =
-        "/Library/LaunchDaemons/io.github.keeplearning2026.clash.service.plist";
+    let plist_file = "/Library/LaunchDaemons/io.github.keeplearning2026.clash.service.plist";
     let plist_file = Path::new(plist_file);
 
     let launchd_plist_content = format!(
@@ -100,11 +94,7 @@ fn main() -> Result<(), Error> {
     // 设置权限
     // 设置 LaunchDaemons plist 权限
     let _ = run_command("chmod", &["644", plist_file.to_str().unwrap()], debug);
-    let _ = run_command(
-        "chown",
-        &["root:wheel", plist_file.to_str().unwrap()],
-        debug,
-    );
+    let _ = run_command("chown", &["root:wheel", plist_file.to_str().unwrap()], debug);
 
     // 设置二进制文件权限
     let _ = run_command("chmod", &["544", &target_binary_path], debug);
@@ -117,17 +107,10 @@ fn main() -> Result<(), Error> {
     // 加载和启动服务
     let _ = run_command(
         "launchctl",
-        &[
-            "enable",
-            "system/io.github.keeplearning2026.clash.service",
-        ],
+        &["enable", "system/io.github.keeplearning2026.clash.service"],
         debug,
     );
-    let _ = run_command(
-        "launchctl",
-        &["bootout", "system", plist_file.to_str().unwrap()],
-        debug,
-    );
+    let _ = run_command("launchctl", &["bootout", "system", plist_file.to_str().unwrap()], debug);
     let _ = run_command(
         "launchctl",
         &["bootstrap", "system", plist_file.to_str().unwrap()],
@@ -152,9 +135,7 @@ fn main() -> Result<(), Error> {
 
     let debug = env::args().any(|arg| arg == "--debug");
 
-    let service_binary_path = env::current_exe()
-        .unwrap()
-        .with_file_name("clash-service");
+    let service_binary_path = env::current_exe().unwrap().with_file_name("clash-service");
 
     if !service_binary_path.exists() {
         return Err(anyhow::anyhow!("clash-service binary not found"));
@@ -169,11 +150,7 @@ fn main() -> Result<(), Error> {
     match status_output.status.code() {
         Some(0) => return Ok(()), // Service is running
         Some(1) | Some(2) | Some(3) => {
-            run_command(
-                "systemctl",
-                &["start", &format!("{}.service", SERVICE_NAME)],
-                debug,
-            )?;
+            run_command("systemctl", &["start", &format!("{}.service", SERVICE_NAME)], debug)?;
             return Ok(());
         }
         Some(4) => {} // Service not found, continue with installation
@@ -205,27 +182,23 @@ fn main() -> Result<(), Error> {
 #[cfg(windows)]
 fn main() -> anyhow::Result<()> {
     use platform_lib::{
-        service::{
-            ServiceAccess, ServiceErrorControl, ServiceInfo, ServiceStartType, ServiceState,
-            ServiceType,
-        },
+        service::{ServiceAccess, ServiceErrorControl, ServiceInfo, ServiceStartType, ServiceState, ServiceType},
         service_manager::{ServiceManager, ServiceManagerAccess},
     };
     use std::env;
     use std::ffi::{OsStr, OsString};
 
+    const SERVICE_NAME: &str = "clash_service";
+
     let manager_access = ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE;
     let service_manager = ServiceManager::local_computer(None::<&str>, manager_access)?;
 
-    let service_access = ServiceAccess::QUERY_STATUS | ServiceAccess::START;
-    if let Ok(service) = service_manager.open_service("clash_service", service_access)
-        && let Ok(status) = service.query_status()
-    {
+    let service_access = ServiceAccess::QUERY_STATUS | ServiceAccess::START | ServiceAccess::CHANGE_CONFIG;
+    if let Ok(service) = service_manager.open_service(SERVICE_NAME, service_access) {
+        configure_windows_service_recovery(&service)?;
+        let status = service.query_status()?;
         match status.current_state {
-            ServiceState::StopPending
-            | ServiceState::Stopped
-            | ServiceState::PausePending
-            | ServiceState::Paused => {
+            ServiceState::StopPending | ServiceState::Stopped | ServiceState::PausePending | ServiceState::Paused => {
                 service.start(&Vec::<&OsStr>::new())?;
             }
             _ => {}
@@ -234,9 +207,7 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let service_binary_path = env::current_exe()
-        .unwrap()
-        .with_file_name("clash-service.exe");
+    let service_binary_path = env::current_exe().unwrap().with_file_name("clash-service.exe");
 
     if !service_binary_path.exists() {
         eprintln!("clash-service.exe not found");
@@ -260,7 +231,32 @@ fn main() -> anyhow::Result<()> {
     let service = service_manager.create_service(&service_info, start_access)?;
 
     service.set_description("Clash Service helps to launch clash core")?;
+    configure_windows_service_recovery(&service)?;
     service.start(&Vec::<&OsStr>::new())?;
+
+    Ok(())
+}
+
+#[cfg(windows)]
+fn configure_windows_service_recovery(service: &platform_lib::service::Service) -> platform_lib::Result<()> {
+    use platform_lib::service::{ServiceAction, ServiceActionType, ServiceFailureActions, ServiceFailureResetPeriod};
+    use std::time::Duration;
+
+    let actions = [5, 10, 30]
+        .into_iter()
+        .map(|delay_secs| ServiceAction {
+            action_type: ServiceActionType::Restart,
+            delay: Duration::from_secs(delay_secs),
+        })
+        .collect();
+
+    service.update_failure_actions(ServiceFailureActions {
+        reset_period: ServiceFailureResetPeriod::After(Duration::from_secs(24 * 60 * 60)),
+        reboot_msg: None,
+        command: None,
+        actions: Some(actions),
+    })?;
+    service.set_failure_actions_on_non_crash_failures(true)?;
 
     Ok(())
 }
@@ -275,16 +271,11 @@ pub fn uninstall_old_service() -> Result<(), Error> {
     // Stop and unload service
     run_command("launchctl", &["stop", "io.github.clashverge.helper"], false)?;
     run_command("launchctl", &["bootout", "system", plist_file], false)?;
-    run_command(
-        "launchctl",
-        &["disable", "system/io.github.clashverge.helper"],
-        false,
-    )?;
+    run_command("launchctl", &["disable", "system/io.github.clashverge.helper"], false)?;
 
     // Remove files
     if Path::new(plist_file).exists() {
-        std::fs::remove_file(plist_file)
-            .map_err(|e| anyhow::anyhow!("Failed to remove plist file: {}", e))?;
+        std::fs::remove_file(plist_file).map_err(|e| anyhow::anyhow!("Failed to remove plist file: {}", e))?;
     }
 
     if Path::new(target_binary_path).exists() {

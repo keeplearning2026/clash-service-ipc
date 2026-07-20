@@ -14,25 +14,18 @@ fn main() -> Result<(), Error> {
 
     let _ = uninstall_old_service();
     // 定义路径
-    let bundle_path =
-        "/Library/PrivilegedHelperTools/io.github.keeplearning2026.clash.service.bundle";
-    let plist_file =
-        "/Library/LaunchDaemons/io.github.keeplearning2026.clash.service.plist";
+    let bundle_path = "/Library/PrivilegedHelperTools/io.github.keeplearning2026.clash.service.bundle";
+    let plist_file = "/Library/LaunchDaemons/io.github.keeplearning2026.clash.service.plist";
     let service_id = "io.github.keeplearning2026.clash.service";
 
     // 停止并卸载服务
     let _ = run_command("launchctl", &["stop", service_id], debug);
-    let _ = run_command(
-        "launchctl",
-        &["disable", &format!("system/{}", service_id)],
-        debug,
-    );
+    let _ = run_command("launchctl", &["disable", &format!("system/{}", service_id)], debug);
     let _ = run_command("launchctl", &["bootout", "system", plist_file], debug);
 
     // 删除文件
     if Path::new(plist_file).exists() {
-        std::fs::remove_file(plist_file)
-            .map_err(|e| anyhow::anyhow!("Failed to remove plist file: {}", e))?;
+        std::fs::remove_file(plist_file).map_err(|e| anyhow::anyhow!("Failed to remove plist file: {}", e))?;
     }
 
     // 删除整个 bundle 目录
@@ -52,22 +45,13 @@ fn main() -> Result<(), Error> {
     let debug = env::args().any(|arg| arg == "--debug");
 
     // Stop and disable service
-    let _ = run_command(
-        "systemctl",
-        &["stop", &format!("{}.service", SERVICE_NAME)],
-        debug,
-    );
-    let _ = run_command(
-        "systemctl",
-        &["disable", &format!("{}.service", SERVICE_NAME)],
-        debug,
-    );
+    let _ = run_command("systemctl", &["stop", &format!("{}.service", SERVICE_NAME)], debug);
+    let _ = run_command("systemctl", &["disable", &format!("{}.service", SERVICE_NAME)], debug);
 
     // Remove service file
     let unit_file = format!("/etc/systemd/system/{}.service", SERVICE_NAME);
     if std::path::Path::new(&unit_file).exists() {
-        std::fs::remove_file(&unit_file)
-            .map_err(|e| anyhow::anyhow!("Failed to remove service file: {}", e))?;
+        std::fs::remove_file(&unit_file).map_err(|e| anyhow::anyhow!("Failed to remove service file: {}", e))?;
     }
 
     // Reload systemd
@@ -115,16 +99,11 @@ pub fn uninstall_old_service() -> Result<(), Error> {
     // Stop and unload service
     run_command("launchctl", &["stop", "io.github.clashverge.helper"], false)?;
     run_command("launchctl", &["bootout", "system", plist_file], false)?;
-    run_command(
-        "launchctl",
-        &["disable", "system/io.github.clashverge.helper"],
-        false,
-    )?;
+    run_command("launchctl", &["disable", "system/io.github.clashverge.helper"], false)?;
 
     // Remove files
     if Path::new(plist_file).exists() {
-        std::fs::remove_file(plist_file)
-            .map_err(|e| anyhow::anyhow!("Failed to remove plist file: {}", e))?;
+        std::fs::remove_file(plist_file).map_err(|e| anyhow::anyhow!("Failed to remove plist file: {}", e))?;
     }
 
     if Path::new(target_binary_path).exists() {

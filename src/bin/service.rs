@@ -5,20 +5,16 @@
 
 use anyhow::Result;
 use clash_service_ipc::{
-    acquire_service_owner, reconcile_service_startup, restore_desired_state,
-    run_ipc_supervisor_until_shutdown,
+    acquire_service_owner, reconcile_service_startup, restore_desired_state, run_ipc_supervisor_until_shutdown,
 };
-use tracing::{Level, info};
+use tracing::{Level, info, warn};
 use tracing_subscriber::FmtSubscriber;
 
 #[cfg(windows)]
 use {
     platform_lib::{
         define_windows_service,
-        service::{
-            ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
-            ServiceType,
-        },
+        service::{ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus, ServiceType},
         service_control_handler::{self, ServiceControlHandlerResult},
         service_dispatcher,
     },
@@ -165,8 +161,17 @@ async fn run_standalone() -> Result<()> {
         return Ok(());
     };
 
-    reconcile_service_startup().await?;
-    restore_desired_state().await?;
+    // 启动恢复只做 best-effort；即使失败也要启动 IPC，让 GUI 重连后重推配置自愈。
+    // 否则失效的 desired-state 路径会导致进程退出并被 launchd 反复拉起。
+    if let Err(error) = reconcile_service_startup().await {
+        warn!("Service startup reconciliation failed; continuing to bring up IPC server: {error:#}");
+    }
+    if let Err(error) = restore_desired_state().await {
+        warn!(
+            "Failed to restore desired core state on startup; core will not be auto-started. \
+             Keeping the IPC server up so the GUI can reconnect and recover: {error:#}"
+        );
+    }
 
     run_ipc_supervisor_until_shutdown(shutdown_signal()).await?;
 
@@ -180,8 +185,7 @@ async fn shutdown_signal() {
     {
         use tokio::signal::unix::{SignalKind, signal};
         let mut sigint = signal(SignalKind::interrupt()).expect("Failed to install SIGINT handler");
-        let mut sigterm =
-            signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
+        let mut sigterm = signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
 
         tokio::select! {
             _ = sigint.recv() => info!("Received SIGINT (Ctrl+C)"),
@@ -191,9 +195,7 @@ async fn shutdown_signal() {
 
     #[cfg(windows)]
     {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("Failed to install Ctrl+C handler");
+        tokio::signal::ctrl_c().await.expect("Failed to install Ctrl+C handler");
         info!("Received Ctrl+C");
     }
 }

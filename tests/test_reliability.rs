@@ -8,10 +8,9 @@ mod tests {
     #[cfg(unix)]
     use clash_service_ipc::acquire_service_owner;
     use clash_service_ipc::{
-        ClashConfig, CoreConfig, CoreWatchdogTestConfig, ServiceLifecycleState, connect,
-        persist_core_stopped, reconcile_service_startup, run_ipc_server,
-        run_ipc_supervisor_until_shutdown, service_lifecycle_state, service_paths,
-        service_status_snapshot, set_core_watchdog_config_for_tests, start_clash, stop_ipc_server,
+        ClashConfig, CoreConfig, CoreWatchdogTestConfig, ServiceLifecycleState, connect, persist_core_stopped,
+        reconcile_service_startup, run_ipc_server, run_ipc_supervisor_until_shutdown, service_lifecycle_state,
+        service_paths, service_status_snapshot, set_core_watchdog_config_for_tests, start_clash, stop_ipc_server,
     };
     use serial_test::serial;
     use std::path::PathBuf;
@@ -62,11 +61,7 @@ mod tests {
         }
     }
 
-    async fn wait_until_async<F, Fut>(
-        label: &str,
-        timeout: Duration,
-        mut condition: F,
-    ) -> Result<()>
+    async fn wait_until_async<F, Fut>(label: &str, timeout: Duration, mut condition: F) -> Result<()>
     where
         F: FnMut() -> Fut,
         Fut: std::future::Future<Output = bool>,
@@ -97,10 +92,7 @@ mod tests {
         .await
     }
 
-    async fn wait_for_child_exit(
-        child: &mut Child,
-        timeout: Duration,
-    ) -> Result<Option<ExitStatus>> {
+    async fn wait_for_child_exit(child: &mut Child, timeout: Duration) -> Result<Option<ExitStatus>> {
         let deadline = Instant::now() + timeout;
         loop {
             if let Some(status) = child.try_wait()? {
@@ -165,10 +157,7 @@ mod tests {
             Some(2),
             "second owner should exit when healthy IPC owner is reachable"
         );
-        assert!(
-            connect().await.is_ok(),
-            "healthy owner IPC should remain up"
-        );
+        assert!(connect().await.is_ok(), "healthy owner IPC should remain up");
 
         stop_ipc_server().await?;
         server_handle.await??;
@@ -203,9 +192,7 @@ mod tests {
         let exited = wait_for_child_exit(&mut stale_owner, Duration::from_secs(3)).await?;
         assert!(exited.is_some(), "stale owner process should be terminated");
         assert_eq!(
-            std::fs::read_to_string(paths.pid_file_path())?
-                .trim()
-                .parse::<u32>()?,
+            std::fs::read_to_string(paths.pid_file_path())?.trim().parse::<u32>()?,
             std::process::id()
         );
 
@@ -235,10 +222,7 @@ mod tests {
         reconcile_service_startup().await?;
 
         let exited = wait_for_child_exit(&mut old_core, Duration::from_secs(3)).await?;
-        assert!(
-            exited.is_some(),
-            "reconcile should terminate old unsupervised core"
-        );
+        assert!(exited.is_some(), "reconcile should terminate old unsupervised core");
         assert!(
             !paths.core_runtime_path().exists(),
             "reconcile should remove stale core runtime record"
@@ -285,9 +269,7 @@ mod tests {
         wait_until_async("bounded crash loop", Duration::from_secs(5), || async {
             service_status_snapshot()
                 .await
-                .map(|status| {
-                    status.restart_count >= baseline_restart_count + 2 && status.core_pid.is_none()
-                })
+                .map(|status| status.restart_count >= baseline_restart_count + 2 && status.core_pid.is_none())
                 .unwrap_or(false)
         })
         .await?;

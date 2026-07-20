@@ -24,7 +24,7 @@ jobs:
       prerelease: ${{ steps.release.outputs.prerelease }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
           fetch-depth: 0
@@ -58,7 +58,7 @@ jobs:
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "asset_prefix=clash-verge-service-ipc-$tag" >> "$GITHUB_OUTPUT"
+          echo "asset_prefix=clash-service-ipc-$tag" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
   build:
@@ -89,7 +89,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.tag }}
           fetch-depth: 0
@@ -142,7 +142,7 @@ jobs:
           security import cert.p12 -k github-actions.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k github-actions github-actions.keychain
 
-          for bin in clash-verge-service clash-verge-service-install clash-verge-service-uninstall; do
+          for bin in clash-service clash-service-install clash-service-uninstall; do
             file "target/${{ matrix.target }}/release/$bin"
             lipo -info "target/${{ matrix.target }}/release/$bin" || true
             codesign --force \
@@ -150,7 +150,7 @@ jobs:
               --keychain github-actions.keychain \
               --options runtime \
               --timestamp \
-              --identifier "io.github.clash-verge-rev.clash-verge-rev-service-ipc" \
+              --identifier "io.github.keeplearning2026.clash-service-ipc" \
               "target/${{ matrix.target }}/release/$bin"
             codesign -dvv "target/${{ matrix.target }}/release/$bin"
             codesign -d --entitlements /dev/stdout "target/${{ matrix.target }}/release/$bin"
@@ -163,9 +163,9 @@ jobs:
           $asset = "${{ needs.prepare.outputs.asset_prefix }}-${{ matrix.target }}"
           New-Item -ItemType Directory -Path package -Force | Out-Null
           New-Item -ItemType Directory -Path dist -Force | Out-Null
-          Copy-Item "target/${{ matrix.target }}/release/clash-verge-service.exe" package/
-          Copy-Item "target/${{ matrix.target }}/release/clash-verge-service-install.exe" package/
-          Copy-Item "target/${{ matrix.target }}/release/clash-verge-service-uninstall.exe" package/
+          Copy-Item "target/${{ matrix.target }}/release/clash-service.exe" package/
+          Copy-Item "target/${{ matrix.target }}/release/clash-service-install.exe" package/
+          Copy-Item "target/${{ matrix.target }}/release/clash-service-uninstall.exe" package/
           Copy-Item LICENSE package/
           Compress-Archive -Path package/* -DestinationPath "dist/$asset.zip" -Force
 
@@ -175,14 +175,14 @@ jobs:
         run: |
           asset="${{ needs.prepare.outputs.asset_prefix }}-${{ matrix.target }}"
           mkdir -p package dist
-          cp "target/${{ matrix.target }}/release/clash-verge-service" package/
-          cp "target/${{ matrix.target }}/release/clash-verge-service-install" package/
-          cp "target/${{ matrix.target }}/release/clash-verge-service-uninstall" package/
+          cp "target/${{ matrix.target }}/release/clash-service" package/
+          cp "target/${{ matrix.target }}/release/clash-service-install" package/
+          cp "target/${{ matrix.target }}/release/clash-service-uninstall" package/
           cp LICENSE package/
           tar -czf "dist/$asset.tar.gz" -C package .
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
           path: |
@@ -196,7 +196,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-*
           path: dist
@@ -210,10 +210,10 @@ jobs:
           cat SHA256SUMS
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
-          name: clash-verge-service-ipc ${{ needs.prepare.outputs.tag }}
+          name: clash-service-ipc ${{ needs.prepare.outputs.tag }}
           prerelease: ${{ needs.prepare.outputs.prerelease }}
           generate_release_notes: true
           fail_on_unmatched_files: true

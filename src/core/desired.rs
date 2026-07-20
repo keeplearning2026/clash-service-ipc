@@ -28,21 +28,13 @@ pub async fn load_desired_state() -> Result<DesiredState> {
             return Ok(DesiredState::default());
         }
         Err(error) => {
-            return Err(error).with_context(|| {
-                format!(
-                    "failed to read desired state {:?}",
-                    paths.desired_state_path()
-                )
-            });
+            return Err(error)
+                .with_context(|| format!("failed to read desired state {:?}", paths.desired_state_path()));
         }
     };
 
-    serde_json::from_slice(&content).with_context(|| {
-        format!(
-            "failed to parse desired state {:?}",
-            paths.desired_state_path()
-        )
-    })
+    serde_json::from_slice(&content)
+        .with_context(|| format!("failed to parse desired state {:?}", paths.desired_state_path()))
 }
 
 pub async fn persist_core_started(config: &ClashConfig) -> Result<DesiredState> {
@@ -72,6 +64,9 @@ pub async fn persist_writer_config(config: &WriterConfig) -> Result<DesiredState
 }
 
 pub async fn restore_desired_state() -> Result<()> {
+    #[cfg(all(target_os = "macos", not(feature = "test")))]
+    cleanup_legacy_desired_state().await;
+
     let state = load_desired_state().await?;
 
     if let Some(writer_config) = state.last_writer_config.as_ref()
@@ -90,11 +85,61 @@ pub async fn restore_desired_state() -> Result<()> {
         return Ok(());
     };
 
-    info!(
-        "Restoring core from desired state generation {}",
-        state.generation
-    );
-    CORE_MANAGER.lock().await.start_core(config).await
+    info!("Restoring core from desired state generation {}", state.generation);
+    if let Err(error) = CORE_MANAGER.lock().await.start_core(config).await {
+        // core 路径不存在通常表示 desired-state 已过期；清掉运行意图，避免重启时反复重试。
+        // 其它失败保留意图并交给上层记录。
+        if is_not_found_error(&error) {
+            warn!(
+                "Core binary not found while restoring desired state (stale/translocated path?); \
+                 clearing desired core-run state to stop retrying: {error:#}"
+            );
+            if let Err(clear_error) = persist_core_stopped().await {
+                warn!("Failed to clear stale desired state after not-found core path: {clear_error:#}");
+            }
+            return Ok(());
+        }
+        return Err(error);
+    }
+    Ok(())
+}
+
+/// 判断错误链中是否包含 NotFound I/O 错误，用于识别失效的 core 路径。
+fn is_not_found_error(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        cause
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|io_error| io_error.kind() == std::io::ErrorKind::NotFound)
+    })
+}
+
+/// 线程 B:macOS 状态目录迁到 `/Library/Application Support` 后,清理旧位置残留的
+/// desired-state(launchd 下曾用 `/var/lib`,或 HOME=/var/root 时的 `/var/root/.local/state`)。
+/// 不迁移(GUI 会在下次启动重建状态),仅备份移走避免遗留垃圾或被旧路径误读。
+#[cfg(all(target_os = "macos", not(feature = "test")))]
+async fn cleanup_legacy_desired_state() {
+    let legacy_files = [
+        "/var/lib/clash-service/desired-state.json",
+        "/var/root/.local/state/clash-service/desired-state.json",
+        "/var/lib/clash-verge-service/desired-state.json",
+        "/var/root/.local/state/clash-verge-service/desired-state.json",
+    ];
+    for legacy in legacy_files {
+        let legacy = std::path::Path::new(legacy);
+        match tokio::fs::try_exists(legacy).await {
+            Ok(true) => {
+                let backup = legacy.with_extension("json.legacy.bak");
+                match tokio::fs::rename(legacy, &backup).await {
+                    Ok(()) => info!("Backed up legacy desired-state {:?} -> {:?}", legacy, backup),
+                    Err(error) => {
+                        warn!("Failed to back up legacy desired-state {:?}: {}", legacy, error)
+                    }
+                }
+            }
+            Ok(false) => {}
+            Err(error) => warn!("Failed to check legacy desired-state {:?}: {}", legacy, error),
+        }
+    }
 }
 
 async fn update_desired_state(update: impl FnOnce(&mut DesiredState)) -> Result<DesiredState> {
@@ -122,12 +167,7 @@ async fn write_desired_state(state: &DesiredState) -> Result<()> {
         .with_context(|| format!("failed to write desired state temp file {:?}", temp_path))?;
     tokio::fs::rename(&temp_path, paths.desired_state_path())
         .await
-        .with_context(|| {
-            format!(
-                "failed to move desired state into {:?}",
-                paths.desired_state_path()
-            )
-        })?;
+        .with_context(|| format!("failed to move desired state into {:?}", paths.desired_state_path()))?;
 
     Ok(())
 }

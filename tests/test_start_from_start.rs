@@ -96,20 +96,14 @@ mod tests {
         let handle = run_ipc_server().await.unwrap();
         sleep(Duration::from_millis(100)).await;
 
-        assert!(
-            connect().await.is_ok(),
-            "Should connect after server starts"
-        );
+        assert!(connect().await.is_ok(), "Should connect after server starts");
         info!("✅ IPC server started and connectable");
 
         handle
     }
 
     async fn step_connect_ipc_after_starting_server() {
-        assert!(
-            connect().await.is_ok(),
-            "Should connect to IPC after server start"
-        );
+        assert!(connect().await.is_ok(), "Should connect to IPC after server start");
         info!("✅ IPC connection works after server start");
     }
 
@@ -122,10 +116,7 @@ mod tests {
             log_config: Default::default(),
         };
         let start_result = start_clash(&clash_config).await;
-        assert!(
-            start_result.is_ok(),
-            "Starting clash with mock binary should return Ok"
-        );
+        assert!(start_result.is_ok(), "Starting clash with mock binary should return Ok");
         let desired_state = load_desired_state().await.unwrap();
         assert!(
             desired_state.core_should_be_running,
@@ -137,10 +128,7 @@ mod tests {
         );
 
         let status = service_status_snapshot().await.unwrap();
-        assert!(
-            status.core_pid.is_some(),
-            "Status should include the running core PID"
-        );
+        assert!(status.core_pid.is_some(), "Status should include the running core PID");
         assert!(
             status.desired_core_should_be_running,
             "Status should include desired running state"

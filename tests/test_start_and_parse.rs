@@ -60,23 +60,15 @@ mod tests {
     async fn test_start_and_parse() {
         let _ = stop_ipc_server().await;
 
-        let mut server_handle = run_ipc_server()
-            .await
-            .expect("Starting IPC server should return Ok");
+        let mut server_handle = run_ipc_server().await.expect("Starting IPC server should return Ok");
 
         server_handle = wait_for_ipc_ready(server_handle).await;
 
         let client = connect().await;
-        assert!(
-            client.is_ok(),
-            "Should be able to connect to IPC server after starting"
-        );
+        assert!(client.is_ok(), "Should be able to connect to IPC server after starting");
 
         let version = get_version().await;
-        assert!(
-            version.is_ok(),
-            "Should receive a response from GetVersion command"
-        );
+        assert!(version.is_ok(), "Should receive a response from GetVersion command");
 
         let version_data = version.unwrap().data;
         assert!(version_data.is_some(), "Version data should not be None");
@@ -88,10 +80,7 @@ mod tests {
         );
 
         let mock_version = "mock_version_1.0.0";
-        assert!(
-            mock_version != version,
-            "Version should not match mock version"
-        );
+        assert!(mock_version != version, "Version should not match mock version");
 
         let status = client
             .unwrap()
@@ -99,10 +88,7 @@ mod tests {
             .header("X-IPC-Magic", IPC_AUTH_EXPECT)
             .send()
             .await;
-        assert!(
-            status.is_ok(),
-            "Should receive a response from Status command"
-        );
+        assert!(status.is_ok(), "Should receive a response from Status command");
 
         stop_ipc_server().await.unwrap();
         let res = server_handle.await.unwrap();

@@ -2,9 +2,7 @@
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use clash_service_ipc::{
-        IPC_AUTH_EXPECT, IPC_PATH, IpcCommand, run_ipc_server, stop_ipc_server,
-    };
+    use clash_service_ipc::{IPC_AUTH_EXPECT, IPC_PATH, IpcCommand, run_ipc_server, stop_ipc_server};
     use kode_bridge::IpcHttpClient;
     use serial_test::serial;
     #[cfg(unix)]
@@ -24,19 +22,14 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn start_and_check_permissions() {
-        let server_handle = run_ipc_server()
-            .await
-            .expect("Starting IPC server should return Ok");
+        let server_handle = run_ipc_server().await.expect("Starting IPC server should return Ok");
 
         let client = {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             connect_ipc().await
         };
 
-        assert!(
-            client.is_ok(),
-            "Should be able to connect to IPC server after starting"
-        );
+        assert!(client.is_ok(), "Should be able to connect to IPC server after starting");
 
         let permision = std::fs::metadata(IPC_PATH).expect("Failed to get metadata");
         let permissions = permision.permissions();
@@ -79,20 +72,14 @@ mod tests {
         assert!(!permissions.readonly(), "IPC file should not be readonly");
 
         let client = connect_ipc().await;
-        assert!(
-            client.is_ok(),
-            "Should be able to connect to IPC server after starting"
-        );
+        assert!(client.is_ok(), "Should be able to connect to IPC server after starting");
         let version = client
             .unwrap()
             .get(IpcCommand::GetVersion.as_ref())
             .header("X-IPC-Magic", IPC_AUTH_EXPECT)
             .send()
             .await;
-        assert!(
-            version.is_ok(),
-            "Should receive a response from GetVersion command"
-        );
+        assert!(version.is_ok(), "Should receive a response from GetVersion command");
 
         assert!(
             stop_ipc_server().await.is_ok(),

@@ -1,6 +1,6 @@
 [package]
 name = "clash_service_ipc"
-version = "2.3.0"
+version = "2.3.3-local.1"
 edition = "2024"
 authors = ["Tunglies"]
 license = "GPL-3.0"
